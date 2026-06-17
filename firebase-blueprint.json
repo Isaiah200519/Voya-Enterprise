@@ -1,0 +1,309 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile document containing roles, credentials, and demographic context.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Unique identifier for the user" },
+        "email": { "type": "string", "description": "Primary email coordinate" },
+        "password": { "type": "string", "description": "Hashed or cleartext credentials for security validation" },
+        "name": { "type": "string", "description": "Display name of the user" },
+        "role": { "type": "string", "enum": ["customer", "seller", "admin"], "description": "Functional permission tier" },
+        "approved": { "type": "boolean", "description": "Approval indicator for sellers" },
+        "blocked": { "type": "boolean", "description": "Security block indicator" },
+        "storeId": { "type": "string", "description": "Associated store identifier for sellers" },
+        "profilePicture": { "type": "string", "description": "Secure storage URL representing avatar image" },
+        "phoneNumber": { "type": "string", "description": "Primary telephone sequence" },
+        "referrerNumber": { "type": "string", "description": "Alphanumeric referrer sequence" },
+        "countryOfResidence": { "type": "string", "description": "Demographic country identifier" },
+        "shippingAddress": { "type": "string", "description": "Standard delivery cargo location" },
+        "location": {
+          "type": "object",
+          "description": "Optional location profile structure containing address parameters"
+        }
+      },
+      "required": ["userId", "email", "password", "name", "role"]
+    },
+    "Store": {
+      "title": "Merchant Store",
+      "description": "Store configuration profile operated by a verified seller.",
+      "type": "object",
+      "properties": {
+        "storeId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "storeName": { "type": "string" },
+        "logo": { "type": "string" },
+        "banner": { "type": "string" },
+        "description": { "type": "string" },
+        "approved": { "type": "boolean" },
+        "payoutEmail": { "type": "string" }
+      },
+      "required": ["storeId", "sellerId", "storeName"]
+    },
+    "Product": {
+      "title": "Product Listing",
+      "description": "Product listing record inside the catalog.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "storeId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "description": { "type": "string" },
+        "images": { "type": "array" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["approved", "pending_approval", "rejected"] },
+        "originalPrice": { "type": "number" },
+        "desiredProfit": { "type": "number" },
+        "finalPrice": { "type": "number" },
+        "weight": { "type": "number" },
+        "approvalDate": { "type": "string" },
+        "sizes": { "type": "array" }
+      },
+      "required": ["productId", "storeId", "name", "price", "stock", "originalPrice", "desiredProfit"]
+    },
+    "Order": {
+      "title": "Customer Order",
+      "description": "Completed purchasing transactions.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "storeId": { "type": "string" },
+        "items": { "type": "array" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "shippingAddress": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "paymentReference": { "type": "string" },
+        "paymentSenderDetails": { "type": "string" },
+        "paymentReceipt": { "type": "string" }
+      },
+      "required": ["orderId", "customerId", "storeId", "items", "total", "status"]
+    },
+    "Cart": {
+      "title": "Shopping Cart",
+      "description": "Active shopping cart cache mapping user storage.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "items": { "type": "array" }
+      },
+      "required": ["userId", "items"]
+    },
+    "Wishlist": {
+      "title": "User Wishlist",
+      "description": "Wishlisted products record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "productIds": { "type": "array" }
+      },
+      "required": ["userId", "productIds"]
+    },
+    "RecoveryOtp": {
+      "title": "Recovery OTC Packet",
+      "description": "Password reset validation codes mapping.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "expiry": { "type": "number" },
+        "identifier": { "type": "string" },
+        "wrongAttempts": { "type": "number" }
+      },
+      "required": ["code", "expiry", "identifier", "wrongAttempts"]
+    },
+    "PlatformSettings": {
+      "title": "Platform Settings",
+      "description": "Customized general parameters and branding options of the sourcing platform.",
+      "type": "object",
+      "properties": {
+        "siteName": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "contactAddress": { "type": "string" },
+        "platformLogo": { "type": "string" },
+        "platformBanner": { "type": "string" }
+      },
+      "required": ["siteName", "contactEmail", "contactPhone", "contactAddress"]
+    },
+    "WithdrawalRequest": {
+      "title": "Store Withdrawal Request",
+      "description": "Payment withdrawal claim request from store markup profits.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "storeId": { "type": "string" },
+        "storeName": { "type": "string" },
+        "amount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "accountDetails": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string" },
+        "remarks": { "type": "string" },
+        "reviewedAt": { "type": "string" }
+      },
+      "required": ["id", "sellerId", "storeId", "storeName", "amount", "paymentMethod", "accountDetails", "status", "createdAt"]
+    },
+    "BuyerPaymentRequest": {
+      "title": "Buyer Payment Gateway Proposal",
+      "description": "Custom payment system requested by a buyer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "requestedMethod": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "customerId", "customerName", "customerEmail", "requestedMethod", "details", "status", "createdAt"]
+    },
+    "SellerPaymentRequest": {
+      "title": "Seller Settlement Gateway Proposal",
+      "description": "Custom payment settlement system requested by a merchant.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "storeId": { "type": "string" },
+        "storeName": { "type": "string" },
+        "sellerEmail": { "type": "string" },
+        "requestedMethod": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "sellerId", "storeId", "storeName", "sellerEmail", "requestedMethod", "details", "status", "createdAt"]
+    },
+    "Spin": {
+      "title": "Lucky Spin Entry",
+      "description": "Information on a single spin attempt registered on the prize wheel.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "monthYear": { "type": "string" },
+        "isFree": { "type": "boolean" },
+        "pointsCost": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "username", "monthYear", "isFree", "pointsCost", "createdAt"]
+    },
+    "PointsPurchase": {
+      "title": "Points Purchase Request",
+      "description": "Mobile money payment request to obtain in-app points for wheel spins or order discounts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "amountLrd": { "type": "number" },
+        "receiptImage": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string" },
+        "reviewedAt": { "type": "string" },
+        "adminNotes": { "type": "string" },
+        "paymentProvider": { "type": "string" },
+        "paymentSenderDetails": { "type": "string" }
+      },
+      "required": ["id", "userId", "username", "amountLrd", "receiptImage", "status", "createdAt"]
+    },
+    "MonthlyStats": {
+      "title": "Monthly Spins Stats and Winners",
+      "description": "Calculated spin threshold aggregate statistics and compiled/released winner listings per month.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "monthYear": { "type": "string" },
+        "totalSpins": { "type": "number" },
+        "winners": { "type": "array" },
+        "publishedAt": { "type": "string" }
+      },
+      "required": ["id", "monthYear", "totalSpins", "winners"]
+    },
+    "WinnerAnnouncement": {
+      "title": "Winner Announcement Broadcast",
+      "description": "Broadcast published compiled results and layout images of monthly winners to all users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "monthYear": { "type": "string" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "publishedAt": { "type": "string" }
+      },
+      "required": ["id", "monthYear", "description", "publishedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of all system users."
+    },
+    "/stores/{storeId}": {
+      "schema": "Store",
+      "description": "Collection of all merchant stores."
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of all product listings."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of all customer transaction orders."
+    },
+    "/carts/{userId}": {
+      "schema": "Cart",
+      "description": "Collection of active shopping carts matching authenticated users."
+    },
+    "/wishlists/{userId}": {
+      "schema": "Wishlist",
+      "description": "Collection of user wishlists."
+    },
+    "/recovery_otps/{identifier}": {
+      "schema": "RecoveryOtp",
+      "description": "Active password reset keys and expiration controls check."
+    },
+    "/platform_settings/{settingId}": {
+      "schema": "PlatformSettings",
+      "description": "Custom site settings documents and branding image files."
+    },
+    "/withdrawal_requests/{id}": {
+      "schema": "WithdrawalRequest",
+      "description": "Store withdrawal claims for profit payouts."
+    },
+    "/buyer_payment_requests/{id}": {
+      "schema": "BuyerPaymentRequest",
+      "description": "Custom regional gateways requested by shoppers."
+    },
+    "/seller_payment_requests/{id}": {
+      "schema": "SellerPaymentRequest",
+      "description": "Custom payout channels requested by store merchants."
+    },
+    "/spins/{spinId}": {
+      "schema": "Spin",
+      "description": "Spins registered in the monthly lucky prize wheel."
+    },
+    "/points_purchases/{purchaseId}": {
+      "schema": "PointsPurchase",
+      "description": "Pending and reviewed mobile money points purchase logs."
+    },
+    "/monthly_stats/{statId}": {
+      "schema": "MonthlyStats",
+      "description": "Completed summary results containing winners list of each custom month."
+    },
+    "/winner_announcements/{announcementId}": {
+      "schema": "WinnerAnnouncement",
+      "description": "Published winner descriptions and images broadcasted to public users."
+    }
+  }
+}

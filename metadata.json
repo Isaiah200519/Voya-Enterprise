@@ -1,0 +1,6 @@
+{
+  "name": "Voya",
+  "description": "Voya Sourcing & Premium Marketplace guest experience portal, featuring an interactive product catalog grid and secure login state validation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<!--
+===========================================================================
+VOYA PLATFORM - DEPLOYMENT & FIREBASE CONFIGURATION SETUP GUIDE
+===========================================================================
+Your application has been converted to utilize Firebase Firestore as its
+online database and Firebase Storage as the primary image bucket! All images
+are securely uploaded as binary files and saved as HTTPS download URLs in
+Firestore.
+
+TO CONNECT AND INITIALIZE WITH YOUR PERSONAL FIREBASE PROJECT:
+
+1. CREATE A FIREBASE PROJECT:
+   - Navigate to the Firebase Console: https://console.firebase.google.com/
+   - Click "Add Project" and name it (e.g. "Voya-Sourcing").
+
+2. ENABLE CLOUD FIRESTORE:
+   - Go to "Firestore Database" in the left-hand navigation panel.
+   - Click "Create Database", choose your region, and select Production/Test mode.
+
+3. ENABLE FIREBASE CLOUD STORAGE:
+   - Go to "Storage" in the left-hand navigation panel.
+   - Click "Get Started", select "Start in production mode", and click "Done".
+
+4. ENABLE EMAIL/PASSWORD AUTHENTICATION:
+   - Go to "Authentication" in the left-hand navigation panel.
+   - Under the "Sign-in method" tab, click "Add new provider".
+   - Select "Email/Password", enable it, and save the settings.
+
+5. CONFIGURE WEB CREDENTIALS:
+   - Navigate to the Firebase Project Settings (Gear icon next to Project Overview).
+   - In "Your apps", select the Web icon (</>) to register a new Web App.
+   - Copy the Firebase configuration object keys and paste them into:
+     `/firebase-applet-config.json` inside your project root workspace directory.
+
+6. SECURE CLOUD STORAGE STORAGE RULES:
+   - Go to the "Storage" panel -> "Rules" tab, and use the following:
+     
+     rules_version = '2';
+     service firebase.storage {
+       match /b/{bucket}/o {
+         match /{allPaths=**} {
+           allow read: if true;
+           allow write: if request.auth != null;
+         }
+       }
+     }
+
+7. DEPLOY FIRESTORE SECURITY RULES:
+   - The system has compiled and synchronized `firestore.rules` within the local
+     workspace automatically!
+===========================================================================
+-->
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voya - Premium Global Sourcing Platform</title>
+  
+  <!-- Tailwind CSS via Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Inter and Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            voya: {
+              charcoal: '#111317',
+              dark: '#1b1e24',
+              gold: '#febd69',
+              goldHover: '#f59e0b',
+              accent: '#ff9900',
+              accentDark: '#e67a00',
+              cardBg: '#232f3e',
+              slate: '#eaeded',
+            },
+          },
+          transitionProperty: {
+            'height': 'height',
+            'spacing': 'margin, padding',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Premium custom animation classes and micro-interactions */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #fafafa;
+    }
+    
+    /* Voya logo Amazon-style custom transition underline */
+    .voya-smile-path {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      transition: stroke-dashoffset 0.5s ease-in-out;
+    }
+    .voya-brand:hover .voya-smile-path {
+      stroke-dashoffset: 0;
+    }
+
+    /* Amazon style bounce transition for Cart Icon */
+    @keyframes cartBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .cart-btn:hover .cart-svg {
+      animation: cartBounce 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* Pulse effect for notification rings */
+    @keyframes subtlePulse {
+      0% { transform: scale(0.95); opacity: 0.5; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.5; }
+    }
+    .state-pulse {
+      animation: subtlePulse 2s infinite ease-in-out;
+    }
+
+    /* Eye Icon scan transition for Details */
+    .details-btn:hover .eye-icon-path {
+      transform-origin: center;
+      transform: scale(1.1) rotate(15deg);
+      transition: all 0.3s ease;
+    }
+
+    /* Transition shadow & scale classes for products */
+    .product-card {
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+    }
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      border-color: #f59e0b;
+    }
+
+    /* Chevron arrow morphing translation */
+    .details-btn:hover .chevron-arrow {
+      transform: translateX(4px);
+    }
+
+    /* Modal Backdrop Blur Animation */
+    @keyframes modalFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modalSlideUp {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .animate-modal-bg {
+      animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-modal-card {
+      animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-amber-400 selection:text-slate-900">
+
+  <div id="root">
+    <!-- ================= TESTING STATE CONTROLLER DECK ================= -->
+  <div id="dev-controller" class="sticky top-0 z-50 bg-[#131921] border-b border-[#232f3e] px-4 py-2 text-white">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+      <!-- Status Info -->
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1.5 bg-[#eaeded]/10 text-[#eaeded] font-black uppercase tracking-widest text-[9px] px-2.5 py-1 rounded-full border border-gray-700 font-mono">
+          <span class="w-2 h-2 rounded-full bg-amber-400 state-pulse"></span>
+          Testing Deck
+        </span>
+        <div class="flex items-center gap-2 font-mono">
+          <span class="text-slate-400">isLoggedIn =</span>
+          <span id="current-state-badge" class="px-2 py-0.5 rounded font-black uppercase text-[10px] bg-rose-600/20 text-rose-400 border border-rose-500/30">
+            false
+          </span>
+          <span id="state-desc" class="text-slate-400 italic hidden sm:inline">
+            (All card interactive triggers will redirect to Login Modal popup)
+          </span>
+        </div>
+      </div>
+
+      <!-- Action Toggles -->
+      <div class="flex items-center gap-2">
+        <button 
+          id="btn-set-guest" 
+          onclick="setLoginState(false)"
+          class="px-3 py-1 bg-rose-650 hover:bg-rose-700 bg-red-600/30 text-rose-300 hover:text-white rounded border border-rose-500/20 text-[10.5px] uppercase font-bold tracking-widest transition-all cursor-pointer font-sans"
+        >
+          Mock Logout (isLoggedIn = false)
+        </button>
+        <button 
+          id="btn-set-user" 
+          onclick="setLoginState(true)"
+          class="px-3 py-1 bg-emerald-650 hover:bg-emerald-700 bg-emerald-600/30 text-emerald-300 hover:text-white rounded border border-emerald-500/20 text-[10.5px] uppercase font-bold tracking-widest transition-all cursor-pointer font-sans"
+        >
+          Mock Login (isLoggedIn = true)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VOYA MAIN PORTAL HEADER ================= -->
+  <header class="bg-[#131921] text-white py-3 px-4 shadow-md sticky top-[41px] md:top-[41px] z-40 transition-colors">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo / Voya -->
+      <a href="#" class="voya-brand flex flex-col items-start select-none shrink-0" title="Voya Global Marketplace">
+        <div class="flex items-baseline gap-0.5">
+          <span class="font-display font-black text-2xl tracking-normal text-white uppercase italic">
+            Voya
+          </span>
+          <span class="text-amber-400 text-[10px] font-black tracking-widest uppercase">Direct</span>
+        </div>
+        <!-- Amazon-style curved transition arrow -->
+        <svg class="w-[72px] h-[7px] -mt-0.5" viewBox="0 0 100 10" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 2 Q 50 12 95 2" fill="none" stroke="#ff9900" stroke-width="2.5" stroke-linecap="round" class="voya-smile-path" />
+          <path d="M92 1 L96 3.5 L91 6" fill="transparent" stroke="#ff9900" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </a>
+
+      <!-- Quick Platform Search Bar (Amazon styling mockup) -->
+      <div class="hidden md:flex flex-grow items-center relative max-w-xl group">
+        <input 
+          type="text" 
+          placeholder="Sourcing high-tech accessories, luxury chronoscopes, dynamic items..." 
+          class="w-full bg-[#fafafa] text-slate-900 border-0 outline-none px-4 py-2.5 rounded-l text-xs font-semibold focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-slate-400"
+          disabled
+        >
+        <button class="bg-amber-400 hover:bg-amber-500 text-slate-900 px-5 py-2.5 rounded-r transition-all duration-300 cursor-pointer flex items-center justify-center">
+          <!-- Transition search magnifying glass -->
+          <svg class="w-4 h-4 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Live interactive headers / Status Widget -->
+      <div class="flex items-center gap-4 text-xs">
+        
+        <!-- Quick login action mimicking standard header -->
+        <div class="text-left hidden sm:block">
+          <p class="text-[10px] text-slate-400 font-semibold block leading-none">Hello, Guest</p>
+          <a href="#" onclick="showSimulationModal()" class="font-extrabold text-[#eaeded] hover:text-amber-400 mt-1 block leading-none transition-colors">
+            Account & Sourcing Registry
+          </a>
+        </div>
+
+        <!-- Wishlist -->
+        <a href="#" onclick="handleHeaderShortcut(event)" class="text-[#eaeded] hover:text-amber-400 transition-all text-center relative px-2.5 py-1 text-xs font-bold leading-tight uppercase hidden sm:block">
+          Saves
+          <span class="absolute -top-1.5 -right-1.5 bg-[#ff9900] text-[#131921] text-[8.5px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#131921]">
+            0
+          </span>
+        </a>
+
+        <!-- Premium Cart with responsive Bounce transition -->
+        <button 
+          id="cart-trigger-btn" 
+          onclick="handleHeaderShortcut(event)"
+          class="cart-btn flex items-center gap-2 bg-[#232f3e] hover:bg-[#2c3d52] px-3 py-2 rounded text-xs font-bold transition-all relative border border-[#304156] cursor-pointer"
+        >
+          <div class="relative">
+            <!-- Dynamic Vector Cart -->
+            <svg class="cart-svg w-4 h-4 text-white transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <span id="cart-counter-badge" class="absolute -top-2.5 -right-2.5 bg-amber-400 text-slate-900 border border-[#232f3e] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center transition-all duration-300 scale-95">
+              0
+            </span>
+          </div>
+          <span id="cart-label" class="text-slate-100 hidden md:inline">Procured Items</span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= VOYA GUEST PORTAL HERO BANNER ================= -->
+  <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+    
+    <!-- Hero Banner with Amazon style bottom gradient transition -->
+    <div class="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#131921] via-[#232f3e] to-slate-900 border border-slate-800 shadow-xl py-12 px-6 sm:px-12 text-white">
+      <!-- Decorative vectors in background -->
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent opacity-60 pointer-events-none" />
+      <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-900/50 to-transparent pointer-events-none" />
+      
+      <div class="max-w-2xl relative z-10 space-y-5">
+        <div class="inline-flex items-center gap-1.5 bg-[#eaeded]/10 text-amber-400 font-extrabold uppercase tracking-widest text-[9.5px] px-3 py-1 rounded-full border border-amber-500/20 font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+          Verify Sourcing Infrastructure
+        </div>
+        
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-display font-black text-white tracking-tight uppercase leading-tight">
+          Voya Global Factories <br>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-orange-400">Direct-to-Buyer Fulfillment</span>
+        </h1>
+        
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed font-semibold max-w-xl">
+          Authorized tech and artisan estates across mainland manufacturing hubs. Sign up under the Voya protocol to lock in our corporate 30-day Free Freight program.
+        </p>
+
+        <!-- Dynamic Landing CTAs updated by Guest Control state -->
+        <div id="hero-button-wrapper" class="flex flex-wrap gap-2.5 pt-2">
+          <button 
+            onclick="setLoginState(true)" 
+            id="hero-lnk-login"
+            class="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-[11px] uppercase tracking-wider rounded transition-all cursor-pointer shadow-md border-0 active:scale-95"
+          >
+            Authenticate Guest Code
+          </button>
+          <button 
+            onclick="showSimulationModal()"
+            class="px-5 py-2.5 bg-[#1b1e24] hover:bg-white/5 border border-slate-700 text-slate-200 font-black text-[11px] uppercase tracking-wider rounded transition-all cursor-pointer bg-slate-900 active:scale-95"
+          >
+            Register Sourcing Code
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sourcing Operations Matrix -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-4 shadow-xs">
+      <div class="text-center max-w-lg mx-auto space-y-1">
+        <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-widest font-mono">Voya Logistics Network</span>
+        <h2 class="text-xs font-black text-slate-800 uppercase tracking-tight">Verified Waybill Operations Guide</h2>
+        <div class="w-12 h-1 bg-[#ff9900] mx-auto mt-1" />
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs pt-1.5">
+        <div class="p-4 bg-slate-50/50 border border-slate-150 rounded-lg space-y-1.5">
+          <span class="text-lg">🏭</span>
+          <h3 class="font-extrabold text-slate-800 uppercase tracking-wider">Makers Verified</h3>
+          <p class="text-slate-500 leading-relaxed text-[11px]">Sellers register direct factory specifications. We review original manufacturing costs and lock in factory waybill guarantees.</p>
+        </div>
+
+        <div class="p-4 bg-slate-50/50 border border-slate-150 rounded-lg space-y-1.5">
+          <span class="text-lg">📦</span>
+          <h3 class="font-extrabold text-slate-800 uppercase tracking-wider">Dynamic Geocoding</h3>
+          <p class="text-slate-500 leading-relaxed text-[11px]">Every customer registers clear coordinates. This locks in real-time weight-calculated container shipping rates instantly.</p>
+        </div>
+
+        <div class="p-4 bg-slate-50/50 border border-slate-150 rounded-lg space-y-1.5">
+          <span class="text-lg">🚚</span>
+          <h3 class="font-extrabold text-slate-800 uppercase tracking-wider">Free Freight Route</h3>
+          <p class="text-slate-500 leading-relaxed text-[11px]">Enjoy absolute tax benefits and zero inland logistics cost during our curated promotional sourcing campaigns.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= CATALOG DIRECTORY ================= -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-1.5">
+          <span class="text-amber-500 text-lg">🔥</span>
+          <h3 class="font-display font-black text-slate-800 text-xs sm:text-sm uppercase tracking-widest">
+            Approved Premium Listings
+          </h3>
+        </div>
+        <span class="px-2.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-500 border border-slate-200 rounded text-[9.5px] font-black uppercase font-mono transition-colors">
+          Showing 6 results
+        </span>
+      </div>
+
+      <!-- PRODUCT CARDS GRID CONTAINER -->
+      <!-- 
+        We represent each card's interactive behavior using wrapper elements.
+        If isLoggedIn === false, clicking anywhere on the card triggers the guest modal.
+        If isLoggedIn === true, the inner button triggers are dispatched independently.
+      -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        <!-- CARD 1 -->
+        <article 
+          class="product-card bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between relative shadow-xs cursor-pointer group"
+          onclick="handleProductCardClick('p1', event)"
+        >
+          <div class="aspect-video bg-slate-50 overflow-hidden relative border-b border-slate-150">
+            <span class="absolute top-2.5 left-2.5 bg-slate-900/80 text-white font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full z-10 font-mono backdrop-blur-xs">
+              Makers-X
+            </span>
+            <img 
+              src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80" 
+              alt="Voya Chronoscope Master" 
+              class="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            />
+          </div>
+
+          <div class="p-3.5 flex-grow flex flex-col justify-between space-y-2.5">
+            <div>
+              <div class="flex items-center gap-1 mb-0.5">
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">
+                  Seller: Shenzhen Craft Estate
+                </span>
+              </div>
+              <h4 class="font-display font-extrabold text-[#111317] text-sm leading-snug tracking-tight">
+                Voya Chronoscope Master
+              </h4>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-150 mt-auto">
+              <span class="text-sm text-amber-500 font-extrabold">$289.00</span>
+              <span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded text-[9px] font-bold uppercase font-mono">
+                510g Spec
+              </span>
+            </div>
+
+            <!-- Interactivity buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button 
+                onclick="handleViewDetails('Voya Chronoscope Master', event)"
+                class="details-btn px-2.5 py-1.5 rounded border border-slate-250 text-slate-700 hover:bg-slate-50 cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+              >
+                <span>Details</span>
+                <!-- Chevron shift animation -->
+                <svg class="chevron-arrow w-3 h-3 text-slate-400 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+              
+              <button 
+                onclick="handleAddToCart('Voya Chronoscope Master', event)"
+                class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-colors border-0"
+              >
+                <span>Add &plus;</span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- CARD 2 -->
+        <article 
+          class="product-card bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between relative shadow-xs cursor-pointer group"
+          onclick="handleProductCardClick('p2', event)"
+        >
+          <div class="aspect-video bg-slate-50 overflow-hidden relative border-b border-slate-150">
+            <span class="absolute top-2.5 left-2.5 bg-slate-900/80 text-white font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full z-10 font-mono backdrop-blur-xs">
+              Acoustic Labs
+            </span>
+            <img 
+              src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80" 
+              alt="Voya Acoustics Wave-III" 
+              class="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            />
+          </div>
+
+          <div class="p-3.5 flex-grow flex flex-col justify-between space-y-2.5">
+            <div>
+              <div class="flex items-center gap-1 mb-0.5">
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">
+                  Seller: Guangzhou AeroTech
+                </span>
+              </div>
+              <h4 class="font-display font-extrabold text-[#111317] text-sm leading-snug tracking-tight">
+                Voya Acoustics Wave-III ANC
+              </h4>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-150 mt-auto">
+              <span class="text-sm text-amber-500 font-extrabold">$199.00</span>
+              <span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded text-[9px] font-bold uppercase font-mono">
+                340g Spec
+              </span>
+            </div>
+
+            <!-- Interactivity buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button 
+                onclick="handleViewDetails('Voya Acoustics Wave-III ANC', event)"
+                class="details-btn px-2.5 py-1.5 rounded border border-slate-250 text-slate-700 hover:bg-slate-50 cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+              >
+                <span>Details</span>
+                <svg class="chevron-arrow w-3 h-3 text-slate-400 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+              
+              <button 
+                onclick="handleAddToCart('Voya Acoustics Wave-III ANC', event)"
+                class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-colors border-0"
+              >
+                <span>Add &plus;</span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- CARD 3 -->
+        <article 
+          class="product-card bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between relative shadow-xs cursor-pointer group"
+          onclick="handleProductCardClick('p3', event)"
+        >
+          <div class="aspect-video bg-slate-50 overflow-hidden relative border-b border-slate-150">
+            <span class="absolute top-2.5 left-2.5 bg-slate-900/80 text-white font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full z-10 font-mono backdrop-blur-xs">
+              Home Premium
+            </span>
+            <img 
+              src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&auto=format&fit=crop&q=80" 
+              alt="Voya Lumina Lantern-X" 
+              class="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            />
+          </div>
+
+          <div class="p-3.5 flex-grow flex flex-col justify-between space-y-2.5">
+            <div>
+              <div class="flex items-center gap-1 mb-0.5">
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">
+                  Seller: Jiangsu Smartlight Labs
+                </span>
+              </div>
+              <h4 class="font-display font-extrabold text-[#111317] text-sm leading-snug tracking-tight">
+                Voya Lumina Lantern-X Lamp
+              </h4>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-150 mt-auto">
+              <span class="text-sm text-amber-500 font-extrabold">$89.50</span>
+              <span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded text-[9px] font-bold uppercase font-mono">
+                1.2kg Spec
+              </span>
+            </div>
+
+            <!-- Interactivity buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button 
+                onclick="handleViewDetails('Voya Lumina Lantern-X Lamp', event)"
+                class="details-btn px-2.5 py-1.5 rounded border border-slate-250 text-slate-700 hover:bg-slate-50 cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+              >
+                <span>Details</span>
+                <svg class="chevron-arrow w-3 h-3 text-slate-400 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+              
+              <button 
+                onclick="handleAddToCart('Voya Lumina Lantern-X Lamp', event)"
+                class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-colors border-0"
+              >
+                <span>Add &plus;</span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- CARD 4 -->
+        <article 
+          class="product-card bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between relative shadow-xs cursor-pointer group"
+          onclick="handleProductCardClick('p4', event)"
+        >
+          <div class="aspect-video bg-slate-50 overflow-hidden relative border-b border-slate-150">
+            <span class="absolute top-2.5 left-2.5 bg-slate-900/80 text-white font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full z-10 font-mono backdrop-blur-xs">
+              Logistics Craft
+            </span>
+            <img 
+              src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&auto=format&fit=crop&q=80" 
+              alt="Voya Voyager Backpack" 
+              class="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            />
+          </div>
+
+          <div class="p-3.5 flex-grow flex flex-col justify-between space-y-2.5">
+            <div>
+              <div class="flex items-center gap-1 mb-0.5">
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">
+                  Seller: Guangzhou Leatherware
+                </span>
+              </div>
+              <h4 class="font-display font-extrabold text-[#111317] text-sm leading-snug tracking-tight">
+                Voya Voyager Tactical Shield
+              </h4>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-150 mt-auto">
+              <span class="text-sm text-amber-500 font-extrabold">$135.00</span>
+              <span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded text-[9px] font-bold uppercase font-mono">
+                850g Spec
+              </span>
+            </div>
+
+            <!-- Interactivity buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button 
+                onclick="handleViewDetails('Voya Voyager Tactical Shield', event)"
+                class="details-btn px-2.5 py-1.5 rounded border border-slate-250 text-slate-700 hover:bg-slate-50 cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+              >
+                <span>Details</span>
+                <svg class="chevron-arrow w-3 h-3 text-slate-400 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+              
+              <button 
+                onclick="handleAddToCart('Voya Voyager Tactical Shield', event)"
+                class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-colors border-0"
+              >
+                <span>Add &plus;</span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- CARD 5 -->
+        <article 
+          class="product-card bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between relative shadow-xs cursor-pointer group"
+          onclick="handleProductCardClick('p5', event)"
+        >
+          <div class="aspect-video bg-slate-50 overflow-hidden relative border-b border-slate-150">
+            <span class="absolute top-2.5 left-2.5 bg-slate-900/80 text-white font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full z-10 font-mono backdrop-blur-xs">
+              Dynamic Tech
+            </span>
+            <img 
+              src="https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80" 
+              alt="Voya Obsidian Keyboard" 
+              class="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            />
+          </div>
+
+          <div class="p-3.5 flex-grow flex flex-col justify-between space-y-2.5">
+            <div>
+              <div class="flex items-center gap-1 mb-0.5">
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">
+                  Seller: Shenzhen OEM Tech Lab
+                </span>
+              </div>
+              <h4 class="font-display font-extrabold text-[#111317] text-sm leading-snug tracking-tight">
+                Voya Obsidian Pro Keyboard
+              </h4>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-150 mt-auto">
+              <span class="text-sm text-amber-500 font-extrabold">$165.00</span>
+              <span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded text-[9px] font-bold uppercase font-mono">
+                1.4kg Spec
+              </span>
+            </div>
+
+            <!-- Interactivity buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button 
+                onclick="handleViewDetails('Voya Obsidian Pro Keyboard', event)"
+                class="details-btn px-2.5 py-1.5 rounded border border-slate-250 text-slate-700 hover:bg-slate-50 cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+              >
+                <span>Details</span>
+                <svg class="chevron-arrow w-3 h-3 text-slate-400 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+              
+              <button 
+                onclick="handleAddToCart('Voya Obsidian Pro Keyboard', event)"
+                class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-colors border-0"
+              >
+                <span>Add &plus;</span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- CARD 6 -->
+        <article 
+          class="product-card bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between relative shadow-xs cursor-pointer group"
+          onclick="handleProductCardClick('p6', event)"
+        >
+          <div class="aspect-video bg-slate-50 overflow-hidden relative border-b border-slate-150">
+            <span class="absolute top-2.5 left-2.5 bg-slate-900/80 text-white font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full z-10 font-mono backdrop-blur-xs">
+              Apparel Mills
+            </span>
+            <img 
+              src="https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&auto=format&fit=crop&q=80" 
+              alt="Voya Scribe Journal Pack" 
+              class="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            />
+          </div>
+
+          <div class="p-3.5 flex-grow flex flex-col justify-between space-y-2.5">
+            <div>
+              <div class="flex items-center gap-1 mb-0.5">
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest block font-mono">
+                  Seller: Hangzhou Artisan Mills
+                </span>
+              </div>
+              <h4 class="font-display font-extrabold text-[#111317] text-sm leading-snug tracking-tight">
+                Voya Scribe Bound Journal
+              </h4>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-150 mt-auto">
+              <span class="text-sm text-amber-500 font-extrabold">$45.00</span>
+              <span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded text-[9px] font-bold uppercase font-mono">
+                190g Spec
+              </span>
+            </div>
+
+            <!-- Interactivity buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button 
+                onclick="handleViewDetails('Voya Scribe Bound Journal', event)"
+                class="details-btn px-2.5 py-1.5 rounded border border-slate-250 text-slate-700 hover:bg-slate-50 cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+              >
+                <span>Details</span>
+                <svg class="chevron-arrow w-3 h-3 text-slate-400 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+              
+              <button 
+                onclick="handleAddToCart('Voya Scribe Bound Journal', event)"
+                class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded cursor-pointer font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-colors border-0"
+              >
+                <span>Add &plus;</span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= VOYA PLATFORM FOOTER ================= -->
+  <footer class="bg-voya-charcoal text-slate-400 py-10 px-4 mt-12 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 text-xs">
+      <!-- About -->
+      <div class="space-y-3">
+        <h5 class="text-white font-black text-[10px] uppercase tracking-widest font-mono">About Voya Direct</h5>
+        <p class="leading-relaxed font-semibold">
+          High-volume verified logistics linking factory floors straight to corporate logistics arrays. No intermediate margins. Authorized by the Voya global network.
+        </p>
+      </div>
+
+      <!-- Links 1 -->
+      <div class="space-y-3">
+        <h5 class="text-white font-black text-[10px] uppercase tracking-widest font-mono">Sourcing Hubs</h5>
+        <ul class="space-y-1.5 text-[11px] font-semibold">
+          <li><a href="#" class="hover:text-amber-400 transition-colors">Guangzhou Waybill Center</a></li>
+          <li><a href="#" class="hover:text-amber-400 transition-colors">Shenzhen Advanced Assembly</a></li>
+          <li><a href="#" class="hover:text-amber-400 transition-colors">Zhejiang Craft Mills</a></li>
+        </ul>
+      </div>
+
+      <!-- Links 2 -->
+      <div class="space-y-3">
+        <h5 class="text-white font-black text-[10px] uppercase tracking-widest font-mono">Logistics Programs</h5>
+        <ul class="space-y-1.5 text-[11px] font-semibold">
+          <li><a href="#" class="hover:text-amber-400 transition-colors">30-Day Free Freight promotion</a></li>
+          <li><a href="#" class="hover:text-amber-400 transition-colors">Tax-bonded Storage Facility</a></li>
+          <li><a href="#" class="hover:text-amber-400 transition-colors">Container Bulk Consolidation</a></li>
+        </ul>
+      </div>
+
+      <!-- Settings / Help -->
+      <div class="space-y-3">
+        <h5 class="text-white font-black text-[10px] uppercase tracking-widest font-mono">Contact Operations</h5>
+        <p class="leading-relaxed">
+          Inquiries: <span class="text-white font-semibold">operations@voya-direct.net</span><br>
+          Emergency Sourcing Protocol: <span class="text-white font-semibold">+86 20 8888 8888</span>
+        </p>
+      </div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto text-center text-[10px] text-slate-600 border-t border-slate-800/60 pt-6 mt-8">
+      &copy; 2026 Voya Global Marketplace. Powered by modern web architectures. Sourcing operations overseen by authorized factory delegates.
+    </div>
+  </footer>
+
+  <!-- ================= AUTHENTICATION REQUIRED MODAL ================= -->
+  <!-- 
+    The requested pure HTML/CSS/JS Modal Popup. Styled completely using Tailwind,
+    appearing as a centered overlay with a semi-transparent blur backdrop.
+  -->
+  <div 
+    id="guest-restriction-modal" 
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm hidden animate-modal-bg"
+  >
+    <div 
+      class="bg-white w-full max-w-sm rounded-2xl border border-slate-200 overflow-hidden shadow-2xl flex flex-col justify-between animate-modal-card"
+    >
+      <!-- Header lock notification -->
+      <div class="p-3.5 bg-slate-50 border-b border-slate-150 flex items-center justify-between">
+        <h4 class="font-display font-extrabold text-[#111317] text-xs uppercase tracking-wide flex items-center gap-1.5 font-mono">
+          <svg class="w-4 h-4 text-amber-500 animate-bounce" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+          Sourcing Portal Authentication
+        </h4>
+        <button 
+          onclick="closeGuestModal()" 
+          class="p-1 text-slate-400 hover:text-slate-650 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Icon & Text body -->
+      <div class="p-5 text-center space-y-4">
+        <div class="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto shadow-xs">
+          <span class="text-xl">🔒</span>
+        </div>
+        
+        <div class="space-y-1">
+          <h3 class="font-display font-black text-slate-800 text-sm uppercase tracking-tight">
+            Please login or register to continue
+          </h3>
+          <p class="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+            Voya direct-from-factory catalog items require active enterprise clearance to protect wholesale pricing parameters and bulk allocations.
+          </p>
+        </div>
+      </div>
+
+      <!-- CTA Redirection Actions -->
+      <div class="p-4 bg-slate-50 border-t border-slate-150 grid grid-cols-2 gap-3.5">
+        <button 
+          onclick="handleModalRedirect('Login')"
+          class="py-2 bg-gradient-to-b from-white to-slate-50 border border-slate-300 rounded text-slate-800 font-extrabold text-[10.5px] uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-center select-none active:scale-95 transition-all"
+        >
+          Login
+        </button>
+        <button 
+          onclick="handleModalRedirect('Register')"
+          class="py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-[10.5px] uppercase tracking-wider rounded cursor-pointer text-center select-none shadow-xs border-0 active:scale-95 transition-all"
+        >
+          Register
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= GUEST ANNOUNCEMENT TOAST (Micro notifications) ================= -->
+  <div 
+    id="toast-notification" 
+    class="fixed bottom-5 right-5 z-50 bg-[#131921] border border-[#232f3e] text-white p-3.5 rounded-xl shadow-2xl flex items-center gap-3 max-w-sm transition-all duration-300 translate-y-12 opacity-0 pointer-events-none"
+  >
+    <span class="text-lg" id="toast-icon">🚀</span>
+    <div class="space-y-0.5">
+      <span class="text-[9.5px] font-black text-amber-400 uppercase tracking-widest block font-mono">Voya Core Scribe</span>
+      <p class="text-xs font-semibold text-slate-200" id="toast-message">State initialized successfully.</p>
+    </div>
+  </div>
+
+
+  <!-- ================= CLIENT JAVASCRIPT LOGIC ================= -->
+  <script>
+    // Critical simulation global state
+    window.isLoggedIn = false;
+
+    // Cart and Sourcing variables for logged-in state simulation
+    let virtualCartCount = 0;
+
+    // Toast notification manager
+    function triggerToast(message, icon = '🚀') {
+      const toast = document.getElementById('toast-notification');
+      const msgElem = document.getElementById('toast-message');
+      const iconElem = document.getElementById('toast-icon');
+      
+      msgElem.innerText = message;
+      iconElem.innerText = icon;
+      
+      // Reveal toast
+      toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+      
+      // Auto dismiss after 3 seconds
+      setTimeout(() => {
+        toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+      }, 3000);
+    }
+
+    // Interactive state controller setter
+    function setLoginState(isLoggedInState) {
+      window.isLoggedIn = isLoggedInState;
+      
+      const badge = document.getElementById('current-state-badge');
+      const desc = document.getElementById('state-desc');
+      const heroLoginBtn = document.getElementById('hero-lnk-login');
+
+      if (window.isLoggedIn) {
+        // Logged-in styling update
+        badge.innerText = "true";
+        badge.className = "px-2 py-0.5 rounded font-black uppercase text-[10px] bg-emerald-600/20 text-emerald-400 border border-emerald-500/30";
+        desc.innerText = "(Member Mode Active. Alerts will handle interactions!)";
+        
+        if (heroLoginBtn) {
+          heroLoginBtn.innerText = "✔ You are Authenticated";
+          heroLoginBtn.className = "px-5 py-2.5 bg-emerald-500 text-white font-black text-[11px] uppercase tracking-wider rounded transition-all cursor-not-allowed border-0 shadow-md";
+          heroLoginBtn.onclick = null;
+        }
+
+        triggerToast("Voya Authenticated! Sourcing limits lifted.", "✅");
+      } else {
+        // Guest/Logged-out styling update
+        badge.innerText = "false";
+        badge.className = "px-2 py-0.5 rounded font-black uppercase text-[10px] bg-rose-600/20 text-rose-400 border border-rose-500/30";
+        desc.innerText = "(All card interactive triggers will redirect to Login Modal popup)";
+        
+        if (heroLoginBtn) {
+          heroLoginBtn.innerText = "Authenticate Guest Code";
+          heroLoginBtn.className = "px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-[11px] uppercase tracking-wider rounded transition-all cursor-pointer shadow-md border-0 active:scale-95";
+          heroLoginBtn.onclick = () => setLoginState(true);
+        }
+
+        // Reset cart display
+        virtualCartCount = 0;
+        document.getElementById('cart-counter-badge').innerText = virtualCartCount;
+        document.getElementById('cart-counter-badge').classList.add('scale-95');
+
+        triggerToast("Logged out from Voya Portal. Sourcing restriction locked.", "🔒");
+      }
+    }
+
+    /* 
+      ================ INTERACTIVE CLICK FLOW ROUTER ================
+      Critical rule: 
+      If user is NOT logged in (isLoggedIn === false), clicking ANY interactive 
+      part of a product card (including the card, details btn, or add button)
+      must trigger the login restriction modal.
+    */
+    function handleProductCardClick(productId, event) {
+      if (!window.isLoggedIn) {
+        // NOT LOGGED IN FLOW - Suppress all other triggers & reveal modal
+        event.preventDefault();
+        event.stopPropagation();
+        
+        showGuestModal();
+      } else {
+        // IS LOGGED IN FLOW - clicking the card body itself functions as "View Details"
+        // Avoid double triggering if they clicked the direct Details or Add buttons
+        const isButton = event.target.closest('button');
+        if (!isButton) {
+          alert('Show product details');
+          triggerToast('Displaying product catalog layout...', '🔍');
+        }
+      }
+    }
+
+    // Manual helper button logic for View Details
+    function handleViewDetails(productName, event) {
+      if (!window.isLoggedIn) {
+        // Prevent event bubble to avoid double-triggering
+        event.preventDefault();
+        event.stopPropagation();
+        showGuestModal();
+      } else {
+        event.stopPropagation();
+        alert('Show product details');
+        triggerToast(`Loading specs for "${productName}"`, '🔍');
+      }
+    }
+
+    // Manual helper button logic for Add to Cart
+    function handleAddToCart(productName, event) {
+      if (!window.isLoggedIn) {
+        event.preventDefault();
+        event.stopPropagation();
+        showGuestModal();
+      } else {
+        event.stopPropagation();
+        
+        alert('Added to cart');
+        
+        // Dynamic simulated reactive cart counter badge bounce update
+        virtualCartCount += 1;
+        const badge = document.getElementById('cart-counter-badge');
+        badge.innerText = virtualCartCount;
+        badge.classList.remove('scale-95');
+        badge.classList.add('scale-115', 'bg-emerald-400');
+        
+        setTimeout(() => {
+          badge.classList.remove('scale-115', 'bg-emerald-400');
+          badge.classList.add('scale-100');
+        }, 600);
+
+        triggerToast(`Added "${productName}" to virtual cart!`, '🛒');
+      }
+    }
+
+    // Open/Close Guest restriction modal
+    function showGuestModal() {
+      const modal = document.getElementById('guest-restriction-modal');
+      modal.classList.remove('hidden');
+    }
+
+    function closeGuestModal() {
+      const modal = document.getElementById('guest-restriction-modal');
+      modal.classList.add('hidden');
+    }
+
+    // Redirect trigger within Modal
+    function handleModalRedirect(actionType) {
+      // Print requirements console log
+      console.log('Redirect to login/register');
+      
+      // Display required alert info
+      alert('Redirect to login/register');
+      
+      // Dismiss modal
+      closeGuestModal();
+
+      // Trigger visual action on simulator toolbar as UX assistant
+      triggerToast(`Redirect action initialized via ${actionType}.`, '🚀');
+    }
+
+    // Helper to simulate top nav clicks
+    function handleHeaderShortcut(event) {
+      event.preventDefault();
+      if (!window.isLoggedIn) {
+        showGuestModal();
+      } else {
+        alert('Displaying your virtual portfolio coordinates.');
+      }
+    }
+
+    // Simulation lock for demo header links
+    function showSimulationModal() {
+      if (!window.isLoggedIn) {
+        showGuestModal();
+      } else {
+        triggerToast("Credentials locked! Sourcing active.", "✔");
+      }
+    }
+
+    // Initialize environment elements on startup
+    window.addEventListener('DOMContentLoaded', () => {
+      // Trigger default verification values
+      setLoginState(false);
+    });
+  </script>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

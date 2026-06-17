@@ -1,0 +1,260 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // GLOBAL CATCH-ALL SAFETY NET
+    // ==========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // SECURE GLOBAL UTILITIES
+    // ==========================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getUserRole(request.auth.uid) == "admin";
+    }
+
+    function isSeller() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getUserRole(request.auth.uid) == "seller";
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // ==========================================
+    // USER ENTITY RULES & SCHEMAS
+    // ==========================================
+    function isValidUser(data) {
+      return data.userId is string && data.userId.size() <= 128
+          && data.email is string && data.email.size() <= 200
+          && (!('password' in data) || (data.password is string && data.password.size() <= 300))
+          && data.name is string && data.name.size() <= 200
+          && data.role is string && (data.role == "customer" || data.role == "seller" || data.role == "admin")
+          && (!('referrerNumber' in data) || (data.referrerNumber is string && data.referrerNumber.size() <= 100));
+    }
+
+    match /users/{userId} {
+      allow read, get, list: if true;
+      allow create, update: if isValidId(userId) && isValidUser(request.resource.data);
+      allow delete: if isAdmin() || (request.auth == null);
+    }
+
+    // ==========================================
+    // STORE ENTITY RULES
+    // ==========================================
+    function isValidStore(data) {
+      return data.storeId is string && data.storeId.size() <= 128
+          && data.sellerId is string && data.sellerId.size() <= 128
+          && data.storeName is string && data.storeName.size() <= 200;
+    }
+
+    match /stores/{storeId} {
+      allow read, get, list: if true;
+      allow create, update: if isValidId(storeId) && isValidStore(request.resource.data);
+      allow delete: if isAdmin() || (request.auth == null);
+    }
+
+    // ==========================================
+    // PRODUCT ENTITY RULES & SECURITY ACTIONS
+    // ==========================================
+    function isValidProduct(data) {
+      return data.productId is string && data.productId.size() <= 128
+          && data.storeId is string && data.storeId.size() <= 128
+          && data.name is string && data.name.size() <= 250
+          && data.price is number && data.price >= 0
+          && data.stock is number && data.stock >= 0
+          && (!('originalPrice' in data) || (data.originalPrice is number && data.originalPrice >= 0))
+          && (!('desiredProfit' in data) || (data.desiredProfit is number && data.desiredProfit >= 0));
+    }
+
+    match /products/{productId} {
+      allow read, get, list: if true;
+      allow delete: if isAdmin() || (request.auth == null);
+      
+      // Allow updates/creation if valid product and either:
+      // 1. request.auth is null (fallback for local session guest credential mode)
+      // 2. Logged-in admin is performing any update
+      // 3. Logged-in seller is creating/submitting a product with pending_approval status
+      allow create, update: if isValidId(productId) && isValidProduct(request.resource.data) && (
+        request.auth == null ||
+        isAdmin() ||
+        (isSeller() && (
+          !('status' in request.resource.data) || 
+          request.resource.data.status == "pending_approval"
+        ))
+      );
+    }
+
+    // ==========================================
+    // ORDER ENTITY RULES
+    // ==========================================
+    function isValidOrder(data) {
+      return data.orderId is string && data.orderId.size() <= 128
+          && data.customerId is string && data.customerId.size() <= 128
+          && data.storeId is string && data.storeId.size() <= 128
+          && data.items is list && data.items.size() > 0
+          && data.total is number && data.total >= 0
+          && data.status is string && data.status.size() <= 50
+          && (!('paymentReceipt' in data) || (data.paymentReceipt is string && data.paymentReceipt.size() <= 2097152));
+    }
+
+    match /orders/{orderId} {
+      allow read, get, list: if true;
+      allow create, update: if isValidId(orderId) && isValidOrder(request.resource.data);
+      allow delete: if isAdmin() || (request.auth == null);
+    }
+
+    // ==========================================
+    // CARTS COLLECTION RULES
+    // ==========================================
+    match /carts/{userId} {
+      allow read, write, get, list: if true;
+    }
+
+    // ==========================================
+    // WISHLISTS COLLECTION RULES
+    // ==========================================
+    match /wishlists/{userId} {
+      allow read, write, get, list: if true;
+    }
+
+    // ==========================================
+    // RECOVERY OTP PACKETS
+    // ==========================================
+    function isValidOtp(data) {
+      return data.code is string && data.code.size() == 6
+          && data.expiry is number
+          && data.identifier is string && data.identifier.size() <= 200
+          && data.wrongAttempts is number && data.wrongAttempts >= 0;
+    }
+
+    match /recovery_otps/{identifier} {
+      allow read, get, list, delete: if true;
+      allow create, update: if isValidOtp(request.resource.data);
+    }
+
+    // ==========================================
+    // PLATFORM SETTINGS COLLECTION RULES
+    // ==========================================
+    match /platform_settings/{settingId} {
+      allow read, get, list: if true;
+      allow write, create, update: if true;
+    }
+
+    // ==========================================
+    // NOTIFICATIONS & AUDIT LOGS
+    // ==========================================
+    match /notifications/{id} {
+      allow read, write, get, list, create, update, delete: if true;
+    }
+
+    match /audit_logs/{id} {
+      allow read, write, get, list, create, update, delete: if true;
+    }
+
+    // ==========================================
+    // SEED & CONNECTION TESTING EXCLUSIVES
+    // ==========================================
+    match /test/{id} {
+      allow read, get, list: if true;
+      allow write: if true;
+    }
+
+    // ==========================================
+    // WITHDRAWAL REQUESTS
+    // ==========================================
+    function isValidWithdrawalRequest(data) {
+      return data.id is string && data.id.size() <= 128
+          && data.sellerId is string && data.sellerId.size() <= 128
+          && data.storeId is string && data.storeId.size() <= 128
+          && data.storeName is string && data.storeName.size() <= 200
+          && data.amount is number && data.amount > 0
+          && data.paymentMethod is string && data.paymentMethod.size() <= 200
+          && data.accountDetails is string && data.accountDetails.size() <= 1000
+          && data.status is string && (data.status == "pending" || data.status == "approved" || data.status == "rejected");
+    }
+
+    match /withdrawal_requests/{id} {
+      allow read, get, list: if true;
+      allow create, update: if isValidId(id) && isValidWithdrawalRequest(request.resource.data);
+      allow delete: if isAdmin() || (request.auth == null);
+    }
+
+    // ==========================================
+    // BUYER PAYMENT REQUESTS
+    // ==========================================
+    function isValidBuyerPaymentRequest(data) {
+      return data.id is string && data.id.size() <= 128
+          && data.customerId is string && data.customerId.size() <= 128
+          && data.customerName is string && data.customerName.size() <= 200
+          && data.customerEmail is string && data.customerEmail.size() <= 200
+          && data.requestedMethod is string && data.requestedMethod.size() <= 200
+          && data.details is string && data.details.size() <= 1000
+          && data.status is string && (data.status == "pending" || data.status == "integrated" || data.status == "resolved" || data.status == "rejected");
+    }
+
+    match /buyer_payment_requests/{id} {
+      allow read, get, list: if true;
+      allow create, update: if isValidId(id) && isValidBuyerPaymentRequest(request.resource.data);
+      allow delete: if isAdmin() || (request.auth == null);
+    }
+
+    // ==========================================
+    // SELLER PAYMENT REQUESTS
+    // ==========================================
+    function isValidSellerPaymentRequest(data) {
+      return data.id is string && data.id.size() <= 128
+          && data.sellerId is string && data.sellerId.size() <= 128
+          && data.storeId is string && data.storeId.size() <= 128
+          && data.storeName is string && data.storeName.size() <= 200
+          && data.sellerEmail is string && data.sellerEmail.size() <= 200
+          && data.requestedMethod is string && data.requestedMethod.size() <= 200
+          && data.details is string && data.details.size() <= 1000
+          && data.status is string && (data.status == "pending" || data.status == "integrated" || data.status == "resolved" || data.status == "rejected");
+    }
+
+    match /seller_payment_requests/{id} {
+      allow read, get, list: if true;
+      allow create, update: if isValidId(id) && isValidSellerPaymentRequest(request.resource.data);
+      allow delete: if isAdmin() || (request.auth == null);
+    }
+
+    // ==========================================
+    // LUCKY DRAW / PRIZE WHEEL SEGMENTS
+    // ==========================================
+    match /spins/{id} {
+      allow read, write, get, list: if true;
+    }
+
+    match /points_purchases/{id} {
+      allow read, write, get, list: if true;
+    }
+
+    match /monthly_stats/{id} {
+      allow read, write, get, list: if true;
+    }
+
+    match /winner_announcements/{id} {
+      allow read, write, get, list: if true;
+    }
+  }
+}
