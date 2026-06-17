@@ -256,5 +256,12 @@ service cloud.firestore {
     match /winner_announcements/{id} {
       allow read, write, get, list: if true;
     }
+
+    // ==========================================
+    // TRANSACTIONS LEDGER RULES
+    // ==========================================
+    match /transactions/{id} {
+      allow read, write, get, list: if true;
+    }
   }
 }

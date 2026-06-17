@@ -242,6 +242,22 @@
         "publishedAt": { "type": "string" }
       },
       "required": ["id", "monthYear", "description", "publishedAt"]
+    },
+    "Transaction": {
+      "title": "Account Transaction Log",
+      "description": "Financial ledger log for deposits, withdrawals, and purchases.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["deposit", "payment", "withdrawal", "admin_adjust"] },
+        "referenceId": { "type": "string" },
+        "remarks": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "userId", "username", "amount", "type", "timestamp"]
     }
   },
   "firestore": {
@@ -304,6 +320,10 @@
     "/winner_announcements/{announcementId}": {
       "schema": "WinnerAnnouncement",
       "description": "Published winner descriptions and images broadcasted to public users."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Collection of all legal account transactional ledger records."
     }
   }
 }

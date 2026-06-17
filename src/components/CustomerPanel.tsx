@@ -811,7 +811,8 @@ export default function CustomerPanel({ currentUser, onLogout, showToast, setCur
       return;
     }
 
-    if (currentUser.role === 'customer' && !currentUser.location) {
+    // Sourcing restriction lock on checkout bypassed as requested by user
+    if (false && currentUser.role === 'customer' && !currentUser.location) {
       showToast('Mandatory Location Setup first! Redirecting...', 'error');
       return;
     }
@@ -1685,8 +1686,8 @@ export default function CustomerPanel({ currentUser, onLogout, showToast, setCur
 
   const cartTotalItems = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
-  // Mandatory Location Setup Screen for customers whose location is not configured
-  if (currentUser && currentUser.role === 'customer' && !currentUser.location) {
+  // Mandatory Location Setup Screen for customers bypassed at user request
+  if (false && currentUser && currentUser.role === 'customer' && !currentUser.location) {
     const handleMandatoryLocationSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!locCountry || !locCity || !locStreetAddress || !locPostalCode) {
